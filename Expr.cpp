@@ -118,3 +118,37 @@ std::vector<VARP> Variable::mapToSequence(const std::map<std::string, VARP>& sou
     }
     return outputs;
 }
+
+std::vector<EXPRP> Variable::getExecuteOrder(const std::vector<VARP>& outputs) {
+    std::vector<EXPRP> sequence;
+    for (auto output : outputs) {
+        Expr::visit(
+                        output->mFrom, [](EXPRP expr) { return !expr->visited(); },
+                        [&sequence](EXPRP expr) {
+                            //FUNC_PRINT_ALL(var->name().c_str(), s);
+                            if (!expr->visited()) {
+                                sequence.emplace_back(expr);
+                                expr->setVisited(true);
+                            }
+                            return true;
+                        });
+    }
+    for (auto expr : sequence) {
+        expr->setVisited(false);
+    }
+    return sequence;
+}
+
+void Expr::visit(EXPRP expr, const std::function<bool(EXPRP)>& before, const std::function<bool(EXPRP)>& after) {
+    
+    bool next = before(expr);
+    if (!next) {
+        
+        return;
+    }
+    for (int i = 0; i < expr->inputs().size(); ++i) {
+        printf("expr id is %s\n",MNN::EnumNameOpType(expr->get()->type()));
+        visit(expr->inputs()[i]->mFrom, before, after);
+    }
+    after(expr);
+}
